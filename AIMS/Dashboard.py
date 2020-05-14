@@ -3,7 +3,7 @@ from AIMS.Login import login
 
 class dashboard:
     """
-    THis is
+    This is Dashboard class
     """
 
     def main(self):
