@@ -1,25 +1,30 @@
+import calendar
 import datetime
 import re
 import uuid
+
+
 from cryptography.fernet import Fernet
-import getpass
+import pandas as pd
+import matplotlib.pyplot as plot
 
 import AIMS.Repository as repo
 from sqlite3 import Error
 
-connection = repo.sql_connection()
 
 
 class admin:
-
+    """ This is Admin class of AIMS """
     def select_choice(self):
+        """ Selection of admin features  """
         ch = ''
-        while ch != 8:
+        while ch != "10":
             print("ADMIN MENU")
             print(
                 "1.ADD MEMBER 2.UPDATE MEMBER 3.DELETE MEMBER 4.CREATE TEAM 5.UPDATE TEAM 6.DELETE TEAM 7.GIVE "
-                "JUDGEMENT 8.EXIT")
-            ch = input("Select Your Option (1-8): ")
+                "JUDGEMENT 8.VISUALISE DATA 9.VISUALISE ACCIDENTS 10.EXIT")
+            ch = input("Select Your Option (1-10): ")
+            print(ch)
             if ch == '1':
                 self.create_member()
             elif ch == '2':
@@ -34,11 +39,19 @@ class admin:
                 self.delete_team()
             elif ch == '7':
                 self.final_judgement()
+            elif ch == '8':
+                self.visualise_data()
+            elif ch == '9':
+                self.visualise_accidents()
+            elif ch == '10':
+                return True
             else:
                 print("Invalid choice")
-        return True
 
     def create_member(self):
+        """Create new Employee of the organisation
+           :return:True/False
+        """
         print("Creating new member")
         username = self.input_username()
         password = self.input_password()
@@ -48,14 +61,15 @@ class admin:
         role_id = str(uuid.uuid4())
         working_zone = input("Insert member's working zone: ")
         name = input("Enter employee name: ")
-        phone_number = ''
         while not "".join(name.split(' ')).isalpha():
             name = input("Enter employee name: ")
 
-        while not phone_number.isnumeric():
+        phone_number = input(("Enter the phone number: "))
+        while not phone_number.isdigit():
             phone_number = input("Enter employee phone number: ")
 
         try:
+            connection = repo.sql_connection()
             cursor = connection.cursor()
             cursor.execute(
                 "INSERT INTO login(username,password,role_name,role_id,created_at,delete_value) VALUES(\'{}\',\'{}\',"
@@ -73,6 +87,9 @@ class admin:
             return False
 
     def update_member(self):
+        """ Update existing employee of the organisation
+            :return:True/False
+        """
         print("Updating a member")
         try:
             connection = repo.sql_connection()
@@ -95,6 +112,10 @@ class admin:
             return False
 
     def delete_member(self):
+        """
+        Delete existing employee of the organisation
+        :return: True/False
+        """
         try:
             print("Deleting a member")
             connection = repo.sql_connection()
@@ -134,6 +155,10 @@ class admin:
             return False
 
     def input_username(self):
+        """
+        Check username existence from the login table
+        :return: True/False
+        """
         username = input("Enter username of member: ")
         connection = repo.sql_connection()
         cursor = connection.cursor()
@@ -149,6 +174,10 @@ class admin:
         self.input_username()
 
     def input_password(self):
+        """
+        Generate password
+        :return: True/False
+        """
         password = input("Enter your password...should be atleast of length 6: ")
         re_check = input('Re-enter your password: ')
         if password and len(password) >= 6 and password == re_check:
@@ -163,6 +192,11 @@ class admin:
         return None
 
     def is_updated(self, cursor):
+        """
+        To check which field you want to update
+        :param cursor: connection/command to execute query
+        :return: True/False
+        """
         role_id = input("Select the role id for which you need to update the record: ")
         if role_id and re.match("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
                                 role_id):
@@ -174,27 +208,29 @@ class admin:
                     cursor.execute(
                         "UPDATE employee SET working_zone = \'{}\' WHERE role_id = \'{}\'".format(new_working_zone,
                                                                                                   role_id))
-
                 elif ch == '2':
                     name = input("Enter new name: ")
                     if "".join(name.split(' ')).isalpha():
                         cursor.execute("UPDATE employee SET name = \'{}\' WHERE role_id = \'{}\'".format(name, role_id))
-                    print("Name should only consist of alphabets")
-                    pass
+                    else:
+                        print("Name should only consist of alphabets")
                 elif ch == '3':
                     phone_number = input("Enter new phone number: ")
-                    if phone_number.isnumeric():
+                    if phone_number.isdigit():
                         cursor.execute(
                             "UPDATE employee SET phone_number = \'{}\' WHERE role_id = \'{}\'".format(phone_number,
                                                                                                       role_id))
-                    print("Phone number should be only numeric")
-                    pass
+                    else:
+                        print("Phone number should be only numeric")
                 else:
-                    return
+                    return False
         print("Role id didn't match....try again")
         self.is_updated(cursor)
-
     def create_team(self):
+        """
+        Create supervising team
+        :return:True/False
+        """
         try:
             print("Creating a new team to investigate")
             connection = repo.sql_connection()
@@ -235,7 +271,7 @@ class admin:
                         else:
                             print("Error with the role id.Role id cannot be added....try again")
                     elif n == '2':
-                        print("Okay")
+                        break
                     else:
                         print("Invalid choice")
                 team_id = str(uuid.uuid4())
@@ -243,7 +279,7 @@ class admin:
                 while not self.validate_team_name(team_name, cursor):
                     print("Entered team name already exist....try again")
                     team_name = input("Enter the team name: ")
-                while not team_name.isalnum():
+                while not team_name.isalpha():
                     print("Entered team name is not right....try again")
                     team_name = input("Enter the team name: ")
                 password = self.input_password()
@@ -260,6 +296,8 @@ class admin:
                 cursor.execute("UPDATE complains SET status = 'working' WHERE complain_id = \'{}\'".format(complain_id))
                 connection.commit()
                 cursor.close()
+                print("Your team has been created")
+                return True
             else:
                 print("There are no members to  be added")
                 return False
@@ -268,6 +306,10 @@ class admin:
             return False
 
     def update_team(self):
+        """
+        Update the team
+        :return: True/False
+        """
         try:
             print("Updating the team")
             connection = repo.sql_connection()
@@ -303,8 +345,8 @@ class admin:
                                 role_id = input("Entred role id is wrong...enter again: ")
                             roles_list = roles_list + role_id + ','
                             cursor.execute(
-                                "UPDATE supervising_team SET role_ids = \'{}\' WHERE complain_id = \'{}\'".format(
-                                    roles_list, complain_id))
+                                "UPDATE supervising_team SET role_ids = \'{}\',updated_at = \'{}\' WHERE complain_id = \'{}\'".format(
+                                    roles_list, datetime.datetime.today(), complain_id))
                             connection.commit()
                             cursor.close()
                             return True
@@ -315,7 +357,7 @@ class admin:
                             "SELECT role_ids from supervising_team where complain_id=\'{}\'".format(
                                 complain_id)).fetchall()[0][0]
                         temp_roles_list = roles_list.split(',')
-                        for i in range(len(temp_roles_list) - 1):
+                        for i in range(len(temp_roles_list) -1):
                             members = cursor.execute(
                                 "SELECT * from employee where deleted = \'False\' and role_id = \'{}\'".format(
                                     temp_roles_list[i])).fetchall()
@@ -331,7 +373,7 @@ class admin:
                             role_id = input("Entred role id is wrong...enter again: ")
                         temp_roles_list.remove(role_id)
                         new_roles_list = ''
-                        for i in range(len(temp_roles_list) - 1):
+                        for i in range(len(temp_roles_list)):
                             new_roles_list = new_roles_list + temp_roles_list[i] + ','
                         cursor.execute(
                             "UPDATE supervising_team SET role_ids = \'{}\' WHERE complain_id = \'{}\'".format(
@@ -348,6 +390,10 @@ class admin:
             return False
 
     def delete_team(self):
+        """
+        Delete existing team
+        :return: True/False
+        """
         try:
             print("Deleting a team")
             connection = repo.sql_connection()
@@ -374,6 +420,12 @@ class admin:
             return False
 
     def validate_roleid(self, role_id, cursor):
+        """
+        validate employee
+        :param role_id: role_id of employee
+        :param cursor: command/connection to sql
+        :return: True/False
+        """
         if not role_id:
             return False
         if not cursor.execute(
@@ -385,6 +437,12 @@ class admin:
         return True
 
     def validate_complaintid(self, complain_id, cursor):
+        """
+        validate complain_id
+        :param complain_id: unique id for each complain
+        :param cursor: command/connection to sql
+        :return: True/False
+        """
         if not complain_id:
             return False
         if not cursor.execute(
@@ -396,6 +454,10 @@ class admin:
         return True
 
     def final_judgement(self):
+        """
+        Judgement by Admin
+        :return: True/False
+        """
         try:
             connection = repo.sql_connection()
             cursor = connection.cursor()
@@ -416,7 +478,7 @@ class admin:
                     print("Entered complain id is wrong")
                     complain_id = input("Enter the complain id for which you want to give judgement: ")
                 verdict = input("Give your final verdict: ")
-                while not "".join(verdict.split(' ')).isalnum():
+                while not "".join(verdict.split(' ')).isalpha():
                     print("Give a proper verdict")
                     verdict = input("Give your final verdict: ")
                 cursor.execute(
@@ -432,6 +494,12 @@ class admin:
             return False
 
     def validate_team_name(self, team_name, cursor):
+        """
+        validate team_name from the supervising_team table
+        :param team_name: unique name of each team
+        :param cursor: command/connection to sql
+        :return: True/False
+        """
         try:
             if cursor.execute("SELECT * FROM supervising_team where team_name=\'{}\'".format(team_name)).fetchall():
                 return False
@@ -440,10 +508,46 @@ class admin:
             print(e)
             return False
 
-# admin().update_member()
-# admin().create_member()
-# admin().delete_member()
-# admin().create_team()
-# admin().delete_team()
-# admin().update_team()
-# admin().final_judgement()
+    def visualise_data(self):
+        """
+        data present about the accidents visualise the no of accidents and incidents happened in a particular month(open vs WIP vs closed)
+        :return:True/False
+        """
+        try:
+            connection = repo.sql_connection()
+            query = "select * from complains"
+            df = pd.read_sql_query(query, connection)
+            df['date'] = pd.to_datetime(df['created_at'])
+            df['month'] = df['date'].dt.month
+            df['month'] = df['month'].apply(lambda x: calendar.month_abbr[x])
+            df_result = df.groupby(['month']).complain_id.agg('count').to_frame(
+                'number_of_cases').reset_index()
+            df_result = pd.DataFrame(df_result)
+            df_result = df_result.sort_values("month", ascending=False)
+            df_result.plot(x="month", y="number_of_cases", kind="bar")
+            plot.show()
+            return True
+        except Error as e:
+            print(e)
+            return False
+
+
+    def visualise_accidents(self):
+        """
+        Death rate/ casualty rates per different types of accidents.
+        :return:True/False
+        """
+        try:
+            connection = repo.sql_connection()
+            query = "select complains.complain_type,report.injured_people,report.dead_people as casualty_rate from " \
+                    "complains INNER JOIN final_report report using(complain_id) "
+            df = pd.read_sql_query(query, connection)
+            df = df.groupby('complain_type')['casualty_rate'].sum().reset_index()
+            df = pd.DataFrame(df)
+            df.plot(x="complain_type", y="casualty_rate", kind="bar")
+            plot.show()
+            print(df)
+        except Error as e:
+            print(e)
+            return False
+

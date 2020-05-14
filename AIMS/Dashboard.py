@@ -2,8 +2,15 @@ from AIMS.Login import login
 
 
 class dashboard:
+    """
+    THis is
+    """
 
     def main(self):
+        """
+        This is like main page off console will give different options
+        :return: True/False
+        """
         print('AIMS(Accident & Incident Management System)')
         ch = ''
         while ch != 4:
@@ -15,34 +22,15 @@ class dashboard:
             print("Select Your Option (1-4)")
             ch = input("Enter your choice: ")
             if ch == '1':
-                self.login_admin()
+                login().check_admin()
             elif ch == '2':
-                self.login_team()
+                login().check_team()
             elif ch == '3':
-                self.login_emp()
+                login().check_emp()
             elif ch == '4':
-                break
+                return True
             else:
                 print("Invalid choice")
-
-    def login_admin(self):
-        if login().check_admin():
-            print("Enter into admin")
-        else:
-            self.login_admin()
-
-    def login_team(self):
-        if login().check_team():
-            print("Enter into team")
-        else:
-            self.login_team()
-
-    def login_emp(self):
-        if login().check_emp():
-            print("Enter into emp")
-        else:
-            self.login_emp()
-
 
 if __name__ == '__main__':
     dashboard().main()
