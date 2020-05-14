@@ -8,7 +8,7 @@ class dashboard:
 
     def main(self):
         """
-        This is like main page off console will give different options
+        This is like main page for Aims console application, and will give different options
         :return: True/False
         """
         print('AIMS(Accident & Incident Management System)')
